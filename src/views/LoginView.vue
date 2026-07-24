@@ -86,6 +86,7 @@ const handleLogin = async () => {
     localStorage.setItem('employeeId', userData.id);
     localStorage.setItem('employeeName', userData.name);
     localStorage.setItem('department', userData.department || '员工');
+    localStorage.setItem('role', userData.role);
 
     ElMessage.success(`欢迎 ${userData.name}`);
 
