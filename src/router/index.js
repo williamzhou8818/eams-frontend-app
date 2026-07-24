@@ -37,6 +37,11 @@ const router = createRouter({
           name: 'AdminEmployees',
           component: () => import('../views/admin/EmployeeManage.vue'),
         },
+        {
+          path: 'attendance',
+          name: 'AdminAttendance',
+          component: () => import('../views/admin/AttendanceManage.vue'),
+        },
         // 后续如果需要考勤管理，可以在这里继续加 children
       ],
     },
