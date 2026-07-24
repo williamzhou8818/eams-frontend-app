@@ -27,6 +27,9 @@
         <el-button type="primary" :icon="Search" @click="loadData"
           >查询</el-button
         >
+        <el-button type="success" :icon="Download" @click="handleExport"
+          >导出 Excel</el-button
+        >
       </div>
     </el-card>
 
@@ -130,7 +133,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { Search } from '@element-plus/icons-vue';
+import { Search, Download } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from '@/api/request';
 
@@ -232,6 +235,32 @@ const handleSubmit = async () => {
   }
 };
 
+const handleExport = () => {
+  // 核心技巧：对于文件下载，直接使用 window.open 或创建一个隐藏的 a 标签点击是最简单有效的
+  // 因为我们的接口需要携带 Token，所以不能直接用 window.open，需要用 axios 获取 blob 流
+
+  request({
+    url: '/api/admin/attendance/export',
+    method: 'get',
+    responseType: 'blob', // 👈 关键：告诉 axios 我们要接收二进制文件流
+  })
+    .then((res) => {
+      // 创建一个隐藏的 a 标签来触发下载
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '考勤数据导出.xlsx'); // 下载的文件名
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link); // 下载完移除标签
+
+      ElMessage.success('导出成功');
+    })
+    .catch((err) => {
+      ElMessage.error('导出失败');
+      console.error(err);
+    });
+};
 onMounted(() => {
   loadData();
 });
