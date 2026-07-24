@@ -41,7 +41,7 @@
       </el-form>
 
       <div class="text-center mt-8">
-        <p class="text-xs text-gray-400">© 2026 EAMS 考勤系统</p>
+        <p class="text-xs text-gray-400">© 2026 龍華考勤系统</p>
       </div>
     </el-card>
   </div>

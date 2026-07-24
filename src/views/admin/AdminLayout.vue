@@ -7,7 +7,7 @@
       <div
         class="h-16 flex items-center justify-center border-b border-slate-700"
       >
-        <h1 class="text-lg font-bold tracking-wider">EAMS 管理后台</h1>
+        <h1 class="text-lg font-bold tracking-wider">龍華管理后台</h1>
       </div>
 
       <nav class="flex-1 py-4 overflow-y-auto">
@@ -52,7 +52,7 @@
         <div
           class="h-16 flex items-center justify-center border-b border-slate-700"
         >
-          <h1 class="text-lg font-bold tracking-wider">EAMS 管理后台</h1>
+          <h1 class="text-lg font-bold tracking-wider">龍華管理后台</h1>
         </div>
 
         <nav class="flex-1 py-4 overflow-y-auto">
