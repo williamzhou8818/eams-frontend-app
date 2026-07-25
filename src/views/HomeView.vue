@@ -15,7 +15,29 @@
               <div class="text-xs text-gray-400">{{ department }}</div>
             </div>
           </div>
-          <el-button text @click="handleLogout"> 退出 </el-button>
+
+          <!-- 👇 核心修改 1：右侧操作区，增加管理后台入口 -->
+          <div class="flex items-center gap-2">
+            <!-- 仅 HR 或 ADMIN 可见 -->
+            <el-button
+              v-if="role === 'HR' || role === 'ADMIN'"
+              type="primary"
+              link
+              :icon="Monitor"
+              @click="goToAdmin"
+              class="!text-indigo-600 hover:!text-indigo-800 font-medium"
+            >
+              管理后台
+            </el-button>
+
+            <el-divider
+              direction="vertical"
+              v-if="role === 'HR' || role === 'ADMIN'"
+              class="!h-4"
+            />
+
+            <el-button text @click="handleLogout"> 退出 </el-button>
+          </div>
         </div>
 
         <div class="text-center mt-6">
@@ -26,11 +48,11 @@
         </div>
       </div>
 
-      <!-- 内容区域：添加 v-loading 提升整体体验 (可选，这里我们用按钮级控制更轻量) -->
+      <!-- 内容区域：打卡按钮、今日状态、本周记录 (保持你原有的优秀代码不变) -->
       <div class="px-6 py-6">
         <!-- 打卡按钮 -->
         <div class="flex flex-col gap-3 mb-6">
-          <!-- 👇 出勤打卡按钮优化 -->
+          <!-- 出勤打卡按钮 -->
           <button
             class="h-24 rounded-2xl text-white shadow-lg transition-all duration-300 flex flex-col items-center justify-center"
             :class="[
@@ -43,12 +65,10 @@
             :disabled="isLoading || !!clockInTime"
             @click="handleClock('in')"
           >
-            <!-- 加载中状态 -->
             <div v-if="isLoading" class="flex items-center gap-2">
               <el-icon class="is-loading"><Loading /></el-icon>
               <span class="text-xl font-bold">同步数据中...</span>
             </div>
-            <!-- 正常状态 -->
             <div v-else class="text-xl font-bold">
               {{ clockInTime ? `已出勤 ${clockInTime}` : '出勤打卡' }}
             </div>
@@ -63,7 +83,7 @@
             </div>
           </button>
 
-          <!-- 👇 退勤打卡按钮优化 -->
+          <!-- 退勤打卡按钮 -->
           <button
             class="h-24 rounded-2xl text-white shadow-lg transition-all duration-300 flex flex-col items-center justify-center"
             :class="[
@@ -76,12 +96,10 @@
             :disabled="isLoading || !!clockOutTime"
             @click="handleClock('out')"
           >
-            <!-- 加载中状态 -->
             <div v-if="isLoading" class="flex items-center gap-2">
               <el-icon class="is-loading"><Loading /></el-icon>
               <span class="text-xl font-bold">同步数据中...</span>
             </div>
-            <!-- 正常状态 -->
             <div v-else class="text-xl font-bold">
               {{ clockOutTime ? `已退勤 ${clockOutTime}` : '退勤打卡' }}
             </div>
@@ -135,7 +153,6 @@
           </div>
 
           <el-card class="!rounded-2xl !shadow-sm !border-gray-100">
-            <!-- 加载中骨架屏 (可选，这里用文字提示更轻量) -->
             <div
               v-if="isLoading"
               class="text-center py-8 text-gray-400 text-sm flex flex-col items-center gap-2"
@@ -143,16 +160,12 @@
               <el-icon class="is-loading text-2xl"><Loading /></el-icon>
               <span>正在加载本周记录...</span>
             </div>
-
-            <!-- 没数据 -->
             <div
               v-else-if="weekRecords.length === 0"
               class="text-center py-8 text-gray-400 text-sm"
             >
               本周暂无考勤记录
             </div>
-
-            <!-- 数据 -->
             <div
               v-else
               v-for="(record, index) in weekRecords"
@@ -196,7 +209,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { User, Loading } from '@element-plus/icons-vue'; // 👈 引入 Loading 图标
+// 👇 核心修改 2：引入 Monitor (显示器) 图标代表管理后台
+import { User, Loading, Monitor } from '@element-plus/icons-vue';
 import request from '@/api/request';
 
 const router = useRouter();
@@ -204,14 +218,19 @@ const router = useRouter();
 const employeeId = localStorage.getItem('employeeId');
 const employeeName = ref(localStorage.getItem('employeeName') || '');
 const department = ref(localStorage.getItem('department') || '员工');
+// 👇 核心修改 3：获取当前用户的角色
+const role = ref(localStorage.getItem('role') || '');
 
 if (!employeeId) {
   router.push('/login');
 }
 
-// 👇 核心优化 1：新增全局加载状态
-const isLoading = ref(true);
+// 👇 核心修改 4：跳转到管理后台的方法
+const goToAdmin = () => {
+  router.push('/admin/dashboard');
+};
 
+const isLoading = ref(true);
 const clockInTime = ref(null);
 const clockOutTime = ref(null);
 const workMinutes = ref(null);
@@ -252,11 +271,11 @@ const handleLogout = () => {
   localStorage.removeItem('employeeId');
   localStorage.removeItem('employeeName');
   localStorage.removeItem('department');
+  localStorage.removeItem('role'); // 👈 退出时一并清理 role
   router.push('/login');
 };
 
 const handleClock = async (type) => {
-  // 👇 核心优化 2：点击时立即开启 loading，防止弱网下重复点击
   isLoading.value = true;
   try {
     if (type === 'in') {
@@ -271,7 +290,6 @@ const handleClock = async (type) => {
   } catch (error) {
     ElMessage.error(error.response?.data?.message || '操作失败，请检查网络');
   } finally {
-    // 👇 核心优化 3：无论成功失败，都要关闭 loading，恢复按钮可点击状态（方便用户重试）
     isLoading.value = false;
   }
 };
@@ -324,17 +342,14 @@ const getWeekName = (date) =>
     new Date(date).getDay()
   ];
 
-// ================= 生命周期 =================
 onMounted(async () => {
   try {
-    // 👇 核心优化 4：并发请求，提升加载速度，并在 finally 中统一关闭 loading
     await Promise.all([loadTodayAttendance(), loadWeekAttendance()]);
   } catch (error) {
     ElMessage.error('初始化数据失败，请刷新页面');
   } finally {
-    isLoading.value = false; // 数据加载完毕，解锁 UI
+    isLoading.value = false;
   }
-
   timer = setInterval(() => {
     now.value = new Date();
   }, 1000);
@@ -346,6 +361,7 @@ onUnmounted(() => {
 </script>
 
 <style>
+/* 保持你原有的优秀样式不变 */
 .el-input__wrapper {
   box-shadow: 0 0 0 1px #e5e7eb inset !important;
   border-radius: 12px !important;

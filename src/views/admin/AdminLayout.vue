@@ -37,6 +37,14 @@
           <el-icon class="mr-3"><Calendar /></el-icon>
           <span>考勤管理</span>
         </router-link>
+        <router-link
+          to="/admin/salary"
+          class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+          active-class="bg-indigo-600 text-white border-r-4 border-indigo-300"
+        >
+          <el-icon class="mr-3"><Calendar /></el-icon>
+          <span>工资管理</span>
+        </router-link>
       </nav>
     </aside>
 
@@ -84,6 +92,16 @@
           >
             <el-icon class="mr-3"><Calendar /></el-icon>
             <span>考勤管理</span>
+          </router-link>
+
+          <router-link
+            to="/admin/salary"
+            class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+            active-class="bg-indigo-600 text-white border-r-4 border-indigo-300"
+            @click="isMobileMenuOpen = false"
+          >
+            <el-icon class="mr-3"><Calendar /></el-icon>
+            <span>工资管理</span>
           </router-link>
         </nav>
       </div>

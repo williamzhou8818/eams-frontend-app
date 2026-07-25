@@ -42,6 +42,11 @@ const router = createRouter({
           name: 'AdminAttendance',
           component: () => import('../views/admin/AttendanceManage.vue'),
         },
+        {
+          path: 'salary',
+          name: 'AdminSalary',
+          component: () => import('../views/admin/SalaryManage.vue'),
+        },
         // 后续如果需要考勤管理，可以在这里继续加 children
       ],
     },
