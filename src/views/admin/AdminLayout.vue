@@ -37,12 +37,14 @@
           <el-icon class="mr-3"><Calendar /></el-icon>
           <span>考勤管理</span>
         </router-link>
+
+        <!-- 👇 修改处 1：工资管理使用 Money 图标 -->
         <router-link
           to="/admin/salary"
           class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
           active-class="bg-indigo-600 text-white border-r-4 border-indigo-300"
         >
-          <el-icon class="mr-3"><Calendar /></el-icon>
+          <el-icon class="mr-3"><Money /></el-icon>
           <span>工资管理</span>
         </router-link>
       </nav>
@@ -94,13 +96,14 @@
             <span>考勤管理</span>
           </router-link>
 
+          <!-- 👇 修改处 2：移动端工资管理也使用 Money 图标 -->
           <router-link
             to="/admin/salary"
             class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
             active-class="bg-indigo-600 text-white border-r-4 border-indigo-300"
             @click="isMobileMenuOpen = false"
           >
-            <el-icon class="mr-3"><Calendar /></el-icon>
+            <el-icon class="mr-3"><Money /></el-icon>
             <span>工资管理</span>
           </router-link>
         </nav>
@@ -164,6 +167,7 @@ import {
   DataLine,
   User,
   Calendar,
+  Money, // 👇 修改处 3：引入 Money 图标
 } from '@element-plus/icons-vue';
 
 const router = useRouter();
