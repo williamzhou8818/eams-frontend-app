@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus';
 import router from '@/router';
 
 const request = axios.create({
-  baseURL: 'http://52.6.191.36:8082', // 👈 确保这里是你后端的真实地址 //  http://52.6.191.36:8082
+  baseURL: '', // 👈 确保这里是你后端的真实地址 //  http://52.6.191.36:8082
   timeout: 10000,
 });
 
