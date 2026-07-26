@@ -103,16 +103,32 @@
       width="500px"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
-        <!-- 新增时显示提示，编辑时显示真实工号 -->
+        <!-- 工号：新增时提示自动生成，编辑时显示真实工号 -->
         <el-form-item label="工号" v-if="isEdit">
           <el-input v-model="form.employeeNo" disabled />
         </el-form-item>
         <el-form-item label="工号" v-else>
           <el-input
-            value="系统自动生成 (如 A0001)"
+            value="系统自动生成 (如 0001)"
             disabled
             class="!text-gray-400"
           />
+        </el-form-item>
+
+        <!-- 👇 新增：初期密码框 (仅新增时显示) -->
+        <el-form-item label="初期密码" prop="password" v-if="!isEdit">
+          <el-input
+            v-model="form.password"
+            placeholder="请输入或自动生成初期密码"
+          >
+            <template #append>
+              <el-button
+                :icon="Refresh"
+                @click="generateRandomPassword"
+                title="生成6位随机数字密码"
+              />
+            </template>
+          </el-input>
         </el-form-item>
 
         <el-form-item label="姓名" prop="name">
@@ -150,7 +166,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { Plus, Search, Edit, User, Delete } from '@element-plus/icons-vue';
+import {
+  Plus,
+  Search,
+  Edit,
+  User,
+  Delete,
+  Refresh,
+} from '@element-plus/icons-vue'; // 👈 引入 Refresh 图标
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from '@/api/request';
 
@@ -175,9 +198,10 @@ const form = ref({
   phone: '',
   role: 'EMPLOYEE',
   status: 1,
+  password: '', // 👈 新增 password 字段
 });
 
-// 👇 核心：去掉了 employeeNo 的必填校验，因为它是后端自动生成的
+// 👇 核心：新增时，password 为必填项
 const rules = {
   name: [{ required: true, message: '姓名不能为空', trigger: 'blur' }],
   email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
@@ -185,6 +209,26 @@ const rules = {
     { pattern: /^\d{11}$/, message: '电话必须是 11 位数字', trigger: 'blur' },
   ],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }],
+  // 👇 动态校验：只有在新增 (!isEdit) 时，才校验 password
+  password: [
+    {
+      required: true,
+      message: '初期密码不能为空',
+      trigger: 'blur',
+      validator: (rule, value, callback) => {
+        if (!isEdit.value && !value) {
+          callback(new Error('初期密码不能为空'));
+        } else {
+          callback();
+        }
+      },
+    },
+  ],
+};
+
+// 👇 新增：生成 6 位随机数字密码
+const generateRandomPassword = () => {
+  form.value.password = Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 const loadData = async () => {
@@ -223,6 +267,7 @@ const openDialog = (row = null) => {
       phone: '',
       role: 'EMPLOYEE',
       status: 1,
+      password: '123456', // 👈 新增时，默认赋予一个初始密码 123456
     };
   }
   dialogVisible.value = true;
@@ -232,18 +277,16 @@ const openDialog = (row = null) => {
 };
 
 const handleSubmit = async () => {
-  // 1. 前端表单校验
   if (!formRef.value) return;
   try {
     await formRef.value.validate();
   } catch (error) {
-    return; // 校验失败，直接 return，不发送请求
+    return;
   }
 
   submitting.value = true;
   try {
     let res;
-    // 2. 发送请求并接收完整的 response 对象
     if (isEdit.value) {
       res = await request.put(
         `/api/admin/employees/${form.value.id}`,
@@ -253,17 +296,14 @@ const handleSubmit = async () => {
       res = await request.post('/api/admin/employees', form.value);
     }
 
-    // 👇 3. 核心修复：检查后端返回的业务 code，而不是只看 HTTP 状态码
     if (res.data.code === 200) {
       ElMessage.success(isEdit.value ? '更新成功' : '新增成功');
       dialogVisible.value = false;
       loadData();
     } else {
-      // 后端返回了业务错误 (例如: {code: 500, message: "该邮箱已被其他员工使用！"})
       ElMessage.error(res.data.message || '操作失败，请检查输入');
     }
   } catch (error) {
-    // 4. 处理真正的网络级别错误 (如 401 未授权, 500 服务器崩溃等)
     console.error('🔥 网络或系统级错误:', error);
     const errorMsg =
       error.response?.data?.message || error.message || '网络请求失败';

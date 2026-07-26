@@ -7,7 +7,8 @@
       <div
         class="h-16 flex items-center justify-center border-b border-slate-700"
       >
-        <h1 class="text-lg font-bold tracking-wider">龍華管理后台</h1>
+        <!-- 👇 修改处 1：桌面端公司名字 -->
+        <h1 class="text-lg font-bold tracking-wider">龍華合同会社</h1>
       </div>
 
       <nav class="flex-1 py-4 overflow-y-auto">
@@ -38,7 +39,7 @@
           <span>考勤管理</span>
         </router-link>
 
-        <!-- 👇 修改处 1：工资管理使用 Money 图标 -->
+        <!-- 👇 工资管理使用 Money 图标 -->
         <router-link
           to="/admin/salary"
           class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
@@ -62,7 +63,8 @@
         <div
           class="h-16 flex items-center justify-center border-b border-slate-700"
         >
-          <h1 class="text-lg font-bold tracking-wider">龍華管理后台</h1>
+          <!-- 👇 修改处 2：移动端公司名字 -->
+          <h1 class="text-lg font-bold tracking-wider">龍華合同会社</h1>
         </div>
 
         <nav class="flex-1 py-4 overflow-y-auto">
@@ -96,7 +98,7 @@
             <span>考勤管理</span>
           </router-link>
 
-          <!-- 👇 修改处 2：移动端工资管理也使用 Money 图标 -->
+          <!-- 👇 移动端工资管理也使用 Money 图标 -->
           <router-link
             to="/admin/salary"
             class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
@@ -167,7 +169,7 @@ import {
   DataLine,
   User,
   Calendar,
-  Money, // 👇 修改处 3：引入 Money 图标
+  Money, // 引入 Money 图标
 } from '@element-plus/icons-vue';
 
 const router = useRouter();
