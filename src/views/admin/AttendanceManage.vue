@@ -236,23 +236,28 @@ const handleSubmit = async () => {
 };
 
 const handleExport = () => {
-  // 核心技巧：对于文件下载，直接使用 window.open 或创建一个隐藏的 a 标签点击是最简单有效的
-  // 因为我们的接口需要携带 Token，所以不能直接用 window.open，需要用 axios 获取 blob 流
-
   request({
     url: '/api/admin/attendance/export',
     method: 'get',
-    responseType: 'blob', // 👈 关键：告诉 axios 我们要接收二进制文件流
+    responseType: 'blob',
   })
     .then((res) => {
-      // 创建一个隐藏的 a 标签来触发下载
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', '考勤数据导出.xlsx'); // 下载的文件名
+
+      // 👇 核心修改：前端动态生成带日期的文件名 (例如: 龍華合同会社出勤管理表_20260726.xlsx)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const dateStr = `${year}${month}${day}`;
+
+      link.setAttribute('download', `龍華合同会社出勤管理表_${dateStr}.xlsx`);
+
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link); // 下载完移除标签
+      document.body.removeChild(link);
 
       ElMessage.success('导出成功');
     })
@@ -261,6 +266,7 @@ const handleExport = () => {
       console.error(err);
     });
 };
+
 onMounted(() => {
   loadData();
 });
