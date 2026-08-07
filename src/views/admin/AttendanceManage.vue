@@ -6,13 +6,14 @@
 
     <!-- 搜索栏 -->
     <el-card class="!rounded-xl !border-0 shadow-sm mb-4">
-      <div class="flex flex-col sm:flex-row gap-4">
+      <!-- 核心修改：使用 flex-wrap 替代 flex-col，并使用 w-full 控制移动端对齐 -->
+      <div class="flex flex-wrap gap-4 items-center">
         <el-input
           v-model="keyword"
           placeholder="搜索员工姓名或工号..."
           :prefix-icon="Search"
           clearable
-          class="sm:w-64"
+          class="!w-full sm:!w-64"
           @keyup.enter="loadData"
           @clear="loadData"
         />
@@ -21,15 +22,29 @@
           type="month"
           placeholder="选择月份"
           @change="loadData"
-          class="sm:w-48"
+          class="!w-full sm:!w-48"
           value-format="YYYY-MM"
         />
-        <el-button type="primary" :icon="Search" @click="loadData"
-          >查询</el-button
-        >
-        <el-button type="success" :icon="Download" @click="handleExport"
-          >导出 Excel</el-button
-        >
+
+        <!-- 将两个按钮包裹起来，移动端平分宽度对齐，PC端自适应 -->
+        <div class="flex gap-4 !w-full sm:!w-auto">
+          <el-button
+            type="primary"
+            :icon="Search"
+            @click="loadData"
+            class="flex-1 sm:flex-none"
+          >
+            查询
+          </el-button>
+          <el-button
+            type="success"
+            :icon="Download"
+            @click="handleExport"
+            class="flex-1 sm:flex-none"
+          >
+            导出 Excel
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -66,8 +81,9 @@
               link
               size="small"
               @click="openEditDialog(row)"
-              >修改/补签</el-button
             >
+              修改/补签
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
