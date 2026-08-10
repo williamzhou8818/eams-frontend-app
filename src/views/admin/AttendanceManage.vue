@@ -32,7 +32,7 @@
           value-format="YYYY-MM"
         />
 
-        <!-- ✅ 按钮区：布局交给下方 scoped CSS 控制 -->
+        <!-- 按钮区 -->
         <div class="btn-area">
           <el-button
             type="primary"
@@ -116,7 +116,6 @@
 
       <!-- 📱 移动端：紧凑单行列表 -->
       <div v-else>
-        <!-- 状态图例 -->
         <div
           class="flex items-center gap-4 px-1 py-2 text-xs text-slate-400 border-b border-gray-100"
         >
@@ -129,7 +128,6 @@
           </span>
         </div>
 
-        <!-- 紧凑行 -->
         <div class="divide-y divide-gray-50">
           <div
             v-for="row in tableData"
@@ -142,26 +140,24 @@
             ></span>
             <span
               class="w-16 shrink-0 text-sm font-medium text-slate-800 truncate"
+              >{{ row.employeeName }}</span
             >
-              {{ row.employeeName }}
-            </span>
-            <span class="w-10 shrink-0 text-xs text-slate-400 tabular-nums">
-              {{ row.workDate.substring(5) }}
-            </span>
+            <span class="w-10 shrink-0 text-xs text-slate-400 tabular-nums">{{
+              row.workDate.substring(5)
+            }}</span>
             <span class="flex-1 text-right text-xs tabular-nums text-slate-600">
               {{ fmtTime(row.checkInTime) }} /
-              <span :class="row.checkOutTime ? '' : 'text-rose-500'">
-                {{ fmtTime(row.checkOutTime) }}
-              </span>
+              <span :class="row.checkOutTime ? '' : 'text-rose-500'">{{
+                fmtTime(row.checkOutTime)
+              }}</span>
             </span>
             <el-button
               type="primary"
               link
               size="small"
               @click="openEditDialog(row)"
+              >修改</el-button
             >
-              修改
-            </el-button>
           </div>
         </div>
 
@@ -172,7 +168,6 @@
         />
       </div>
 
-      <!-- 分页器 -->
       <div class="flex justify-center sm:justify-end mt-3 md:mt-6">
         <el-pagination
           v-model:current-page="page"
@@ -202,9 +197,9 @@
         class="mt-2"
       >
         <el-form-item label="员工">
-          <span class="text-gray-700 font-medium">
-            {{ editForm.employeeName }} ({{ editForm.employeeNo }})
-          </span>
+          <span class="text-gray-700 font-medium"
+            >{{ editForm.employeeName }} ({{ editForm.employeeNo }})</span
+          >
         </el-form-item>
         <el-form-item label="日期">
           <span class="text-gray-700 font-medium">{{ editForm.workDate }}</span>
@@ -244,9 +239,8 @@
           type="primary"
           @click="handleEditSubmit"
           :loading="submitting"
+          >确认修改</el-button
         >
-          确认修改
-        </el-button>
       </template>
     </el-dialog>
 
@@ -291,6 +285,7 @@
             type="date"
             placeholder="选择日期"
             value-format="YYYY-MM-DD"
+            :disabled-date="disabledFutureDate"
             :size="compSize"
             class="!w-full"
           />
@@ -334,13 +329,9 @@
         <el-button @click="addDialogVisible = false" :disabled="submitting"
           >取消</el-button
         >
-        <el-button
-          type="warning"
-          @click="handleAddSubmit"
-          :loading="submitting"
+        <el-button type="warning" @click="handleAddSubmit" :loading="submitting"
+          >确认补签</el-button
         >
-          确认补签
-        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -370,7 +361,17 @@ const page = ref(1);
 const pageSize = ref(10);
 
 // ========== 工具函数 ==========
-const fmtTime = (t) => (t ? t.substring(11, 16) : '--:--');
+// 兼容后端返回 "2026-08-10 09:00:00" 或 "2026-08-10T09:00:00" 格式
+const fmtTime = (t) => {
+  if (!t) return '--:--';
+  const timePart = t.includes('T') ? t.split('T')[1] : t.substring(11);
+  return timePart ? timePart.substring(0, 5) : '--:--';
+};
+
+// 只允许选择【今天】或【过去】的日期
+const disabledFutureDate = (date) => {
+  return date.getTime() > Date.now();
+};
 
 // ========== 修改对话框 ==========
 const editDialogVisible = ref(false);
@@ -392,8 +393,8 @@ const employeeOptions = ref([]);
 const addForm = reactive({
   employeeId: null,
   workDate: '',
-  checkInTime: '',
-  checkOutTime: '',
+  checkInTime: null, // 👈 优化：改为 null 避免 TimePicker 警告
+  checkOutTime: null, // 👈 优化：改为 null
   status: 0,
   reason: '',
 });
@@ -444,14 +445,20 @@ const loadData = async () => {
 
 // ========== 搜索员工（补签用） ==========
 const searchEmployees = async (query) => {
-  if (!query) return;
+  if (!query) {
+    employeeOptions.value = [];
+    return;
+  }
   employeeSearchLoading.value = true;
   try {
-    const res = await request.get('/api/admin/employees/search', {
-      params: { keyword: query },
+    // 👇 修改：调用后端现有的分页查询接口，传入 keyword，并限制 pageSize 为 50
+    const res = await request.get('/api/admin/employees', {
+      params: { keyword: query, page: 1, pageSize: 50 },
     });
     if (res.data.code === 200) {
-      employeeOptions.value = res.data.data;
+      // 👇 修改：从分页结果中提取数组 (兼容 VO 里叫 list 或 records 的情况)
+      const data = res.data.data;
+      employeeOptions.value = data.list || data.records || [];
     }
   } catch (error) {
     console.error('搜索员工失败:', error);
@@ -464,8 +471,8 @@ const searchEmployees = async (query) => {
 const openAddDialog = () => {
   addForm.employeeId = null;
   addForm.workDate = '';
-  addForm.checkInTime = '';
-  addForm.checkOutTime = '';
+  addForm.checkInTime = null; // 👈 同步修改为 null
+  addForm.checkOutTime = null; // 👈 同步修改为 null
   addForm.status = 0;
   addForm.reason = '';
   employeeOptions.value = [];
@@ -480,7 +487,7 @@ const handleAddSubmit = async () => {
     try {
       submitting.value = true;
 
-      // 防重复补签检查
+      // 防重复补签检查 (GET 请求，参数名与后端 Attendance 属性名一致)
       const checkRes = await request.get('/api/admin/attendance/check', {
         params: {
           employeeId: addForm.employeeId,
@@ -492,6 +499,7 @@ const handleAddSubmit = async () => {
         return;
       }
 
+      // 组装 payload (POST 请求，直接映射到后端 Attendance 对象)
       const payload = {
         employeeId: addForm.employeeId,
         workDate: addForm.workDate,
@@ -529,9 +537,9 @@ const openEditDialog = (row) => {
     employeeName: row.employeeName,
     employeeNo: row.employeeNo,
     workDate: row.workDate,
-    checkInTimeStr: row.checkInTime ? row.checkInTime.substring(11, 19) : null,
+    checkInTimeStr: row.checkInTime ? fmtTime(row.checkInTime) + ':00' : null,
     checkOutTimeStr: row.checkOutTime
-      ? row.checkOutTime.substring(11, 19)
+      ? fmtTime(row.checkOutTime) + ':00'
       : null,
     status: row.status,
   };
@@ -584,20 +592,16 @@ const handleExport = async () => {
       method: 'get',
       responseType: 'blob',
     });
-
     const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement('a');
     link.href = url;
-
     const now = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     link.setAttribute('download', `龍華合同会社出勤管理表_${dateStr}.xlsx`);
-
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-
     ElMessage.success('导出成功');
   } catch (err) {
     ElMessage.error('导出失败');
@@ -620,19 +624,13 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ========== 按钮区域布局 ========== */
-/* PC端：横向排列，自适应宽度 */
 .btn-area {
   display: flex;
   gap: 12px;
 }
-
-/* ⭐ 关键修复：清除 Element Plus 相邻按钮的 12px 左边距（这就是对不齐的元凶！） */
 .btn-area :deep(.el-button + .el-button) {
   margin-left: 0;
 }
-
-/* 移动端：等宽双列网格，物理级对齐 */
 @media (max-width: 639px) {
   .btn-area {
     display: grid;
