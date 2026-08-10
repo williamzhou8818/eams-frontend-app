@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ⚠️ 注意：这里不能加 scoped！
+   因为 el-drawer 是 teleport 到 body 下渲染的，scoped 样式穿透不到它 */
+.mobile-menu-drawer .el-drawer__body {
+  padding: 0;
+}

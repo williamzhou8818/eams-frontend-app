@@ -7,7 +7,6 @@
       <div
         class="h-16 flex items-center justify-center border-b border-slate-700"
       >
-        <!-- 👇 修改处 1：桌面端公司名字 -->
         <h1 class="text-lg font-bold tracking-wider">龍華合同会社</h1>
       </div>
 
@@ -39,7 +38,6 @@
           <span>考勤管理</span>
         </router-link>
 
-        <!-- 👇 工资管理使用 Money 图标 -->
         <router-link
           to="/admin/salary"
           class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
@@ -57,13 +55,12 @@
       direction="ltr"
       size="250px"
       :with-header="false"
-      class="md:hidden"
+      class="md:hidden mobile-menu-drawer"
     >
       <div class="bg-slate-900 h-full text-white">
         <div
           class="h-16 flex items-center justify-center border-b border-slate-700"
         >
-          <!-- 👇 修改处 2：移动端公司名字 -->
           <h1 class="text-lg font-bold tracking-wider">龍華合同会社</h1>
         </div>
 
@@ -98,7 +95,6 @@
             <span>考勤管理</span>
           </router-link>
 
-          <!-- 👇 移动端工资管理也使用 Money 图标 -->
           <router-link
             to="/admin/salary"
             class="flex items-center px-6 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
@@ -128,7 +124,17 @@
             <el-icon :size="24"><Fold /></el-icon>
           </el-button>
 
-          <div class="flex items-center gap-2 text-gray-600">
+          <!-- 👇 新增：返回打卡主页按钮 -->
+          <el-button type="primary" plain size="small" @click="goToCheckIn">
+            <el-icon class="mr-1"><HomeFilled /></el-icon>
+            <!-- 手机端隐藏文字，只显示图标，节省空间 -->
+            <span class="hidden sm:inline">返回打卡</span>
+          </el-button>
+
+          <!-- 👇 原有工作台标识，加上左边框分割线 -->
+          <div
+            class="flex items-center gap-2 text-gray-500 border-l border-gray-200 pl-3 ml-1"
+          >
             <el-icon><Monitor /></el-icon>
             <span class="text-sm font-medium hidden sm:inline"
               >管理员工作台</span
@@ -169,12 +175,20 @@ import {
   DataLine,
   User,
   Calendar,
-  Money, // 引入 Money 图标
+  Money,
+  HomeFilled, // 👈 新增：引入“首页/打卡”图标
 } from '@element-plus/icons-vue';
 
 const router = useRouter();
 const employeeName = ref(localStorage.getItem('employeeName') || '管理员');
 const isMobileMenuOpen = ref(false); // 控制移动端抽屉开关
+
+// 👇 新增：返回打卡界面的方法
+const goToCheckIn = () => {
+  // ⚠️ 注意：请把 '/' 替换成你实际的前台打卡页面的路由路径！
+  // 例如：如果打卡页路由是 '/checkin'，请改为 router.push('/checkin');
+  router.push('/');
+};
 
 const handleLogout = () => {
   localStorage.clear();
