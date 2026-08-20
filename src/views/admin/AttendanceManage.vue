@@ -90,12 +90,8 @@
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag
-              :type="row.status === 1 ? 'success' : 'warning'"
-              size="small"
-              round
-            >
-              {{ row.status === 1 ? '正常' : '异常' }}
+            <el-tag :type="getStatusTagType(row.status)" size="small" round>
+              {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -120,11 +116,18 @@
           class="flex items-center gap-4 px-1 py-2 text-xs text-slate-400 border-b border-gray-100"
         >
           <span class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>正常
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            正常
           </span>
+
           <span class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span
-            >异常/补签
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+            迟到/早退
+          </span>
+
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+            迟到+早退
           </span>
         </div>
 
@@ -136,7 +139,7 @@
           >
             <span
               class="w-1.5 h-1.5 rounded-full shrink-0"
-              :class="row.status === 1 ? 'bg-emerald-400' : 'bg-orange-400'"
+              :class="getStatusDotClass(row.status)"
             ></span>
             <span
               class="w-16 shrink-0 text-sm font-medium text-slate-800 truncate"
@@ -225,10 +228,9 @@
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="editForm.status" :size="compSize" class="!w-full">
-            <el-option label="正常" :value="1" />
-            <el-option label="异常/补签" :value="0" />
-          </el-select>
+          <el-tag :type="getStatusTagType(editForm.status)" size="large">
+            {{ getStatusText(editForm.status) }}
+          </el-tag>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -338,7 +340,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Search, Download, Plus, EditPen } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from '@/api/request';
@@ -409,6 +411,51 @@ const addFormRules = {
     { required: true, message: '请选择下班时间', trigger: 'change' },
   ],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+};
+
+// ========== 考勤状态 ==========
+
+const getStatusText = (status) => {
+  switch (Number(status)) {
+    case 1:
+      return '正常';
+    case 2:
+      return '迟到';
+    case 3:
+      return '早退';
+    case 4:
+      return '迟到 + 早退';
+    default:
+      return '未打卡';
+  }
+};
+
+const getStatusTagType = (status) => {
+  switch (Number(status)) {
+    case 1:
+      return 'success';
+    case 2:
+    case 3:
+      return 'warning';
+    case 4:
+      return 'danger';
+    default:
+      return 'info';
+  }
+};
+
+const getStatusDotClass = (status) => {
+  switch (Number(status)) {
+    case 1:
+      return 'bg-emerald-400';
+    case 2:
+    case 3:
+      return 'bg-orange-400';
+    case 4:
+      return 'bg-red-400';
+    default:
+      return 'bg-gray-400';
+  }
 };
 
 // ========== 屏幕尺寸监听 ==========
@@ -545,6 +592,37 @@ const openEditDialog = (row) => {
   };
   editDialogVisible.value = true;
 };
+
+const calculateStatus = (checkInTime, checkOutTime) => {
+  if (!checkInTime) {
+    return 0;
+  }
+
+  const late = checkInTime.substring(0, 5) > '10:00';
+
+  const earlyLeave = checkOutTime && checkOutTime.substring(0, 5) < '18:30';
+
+  if (late && earlyLeave) {
+    return 4;
+  }
+
+  if (late) {
+    return 2;
+  }
+
+  if (earlyLeave) {
+    return 3;
+  }
+
+  return 1;
+};
+
+watch(
+  [() => editForm.value.checkInTimeStr, () => editForm.value.checkOutTimeStr],
+  ([checkIn, checkOut]) => {
+    editForm.value.status = calculateStatus(checkIn, checkOut);
+  },
+);
 
 const handleEditSubmit = async () => {
   try {

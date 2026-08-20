@@ -78,7 +78,7 @@
                   ? '请稍候'
                   : clockInTime
                     ? '今日工作已开始'
-                    : '09:00 前打卡为正常'
+                    : '10:00 前打卡为正常'
               }}
             </div>
           </button>
@@ -192,7 +192,7 @@
                 <el-tag
                   size="small"
                   effect="plain"
-                  :type="record.status === '正常' ? 'success' : 'warning'"
+                  :type="getStatusTagType(record.status)"
                 >
                   {{ record.status }}
                 </el-tag>
@@ -266,6 +266,39 @@ const encouragement = computed(() => {
   return list[Math.floor(now.value.getDate() % list.length)];
 });
 
+// 考勤状态
+const getStatusText = (status) => {
+  switch (Number(status)) {
+    case 1:
+      return '正常';
+    case 2:
+      return '迟到';
+    case 3:
+      return '早退';
+    case 4:
+      return '迟到 + 早退';
+    default:
+      return '未打卡';
+  }
+};
+
+const getStatusTagType = (status) => {
+  switch (status) {
+    case '正常':
+      return 'success';
+
+    case '迟到':
+    case '早退':
+      return 'warning';
+
+    case '迟到 + 早退':
+      return 'danger';
+
+    default:
+      return 'info';
+  }
+};
+
 const handleLogout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('employeeId');
@@ -323,7 +356,7 @@ const loadWeekAttendance = async () => {
       in: item.checkInTime ? formatTime(item.checkInTime) : '--:--',
       out: item.checkOutTime ? formatTime(item.checkOutTime) : '--:--',
       hours: formatWorkMinutes(item.workMinutes),
-      status: item.checkInTime ? '正常' : '未打卡',
+      status: getStatusText(item.status),
     }));
   } catch (e) {
     console.error('查询本周失败', e);
