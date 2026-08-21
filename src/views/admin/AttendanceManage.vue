@@ -1347,286 +1347,218 @@ const downloadForIOS = async (blob, fileName, openedWindow) => {
  * 非用户主动操作而拦截。
  * ========================================================= */
 
+// ========== 导出 Excel ==========
 const handleExport = async () => {
-  if (isExporting.value) {
-    return;
-  }
-
-  let iosWindow = null;
-
-  /*
-   * ======================================================
-   * iOS：
-   * 在真正请求接口之前打开窗口
-   *
-   * 这是解决 iPhone 15 “点击没反应”
-   * 的关键。
-   * ======================================================
-   */
-
-  if (isIOS()) {
-    try {
-      iosWindow = window.open('', '_blank');
-
-      if (iosWindow) {
-        iosWindow.document.write(`
-          <!DOCTYPE html>
-          <html lang="zh-CN">
-          <head>
-            <meta charset="UTF-8">
-            <meta
-              name="viewport"
-              content="width=device-width, initial-scale=1"
-            >
-            <title>正在准备 Excel...</title>
-            <style>
-              body {
-                margin: 0;
-                padding: 40px 20px;
-                font-family:
-                  -apple-system,
-                  BlinkMacSystemFont,
-                  "Segoe UI",
-                  sans-serif;
-                background: #f8fafc;
-                color: #334155;
-                text-align: center;
-              }
-
-              .box {
-                max-width: 420px;
-                margin: 80px auto;
-                background: white;
-                border-radius: 20px;
-                padding: 32px 20px;
-                box-shadow:
-                  0 10px 30px
-                  rgba(0,0,0,.06);
-              }
-
-              .loading {
-                width: 36px;
-                height: 36px;
-                margin: 0 auto 20px;
-                border: 4px solid #e2e8f0;
-                border-top-color: #10b981;
-                border-radius: 50%;
-                animation:
-                  spin 1s linear infinite;
-              }
-
-              @keyframes spin {
-                to {
-                  transform: rotate(360deg);
-                }
-              }
-
-              h2 {
-                font-size: 18px;
-                margin: 0 0 8px;
-              }
-
-              p {
-                color: #94a3b8;
-                font-size: 14px;
-                line-height: 1.7;
-              }
-            </style>
-          </head>
-
-          <body>
-            <div class="box">
-              <div class="loading"></div>
-
-              <h2>
-                正在准备 Excel 文件
-              </h2>
-
-              <p>
-                请稍候...
-              </p>
-            </div>
-          </body>
-          </html>
-        `);
-
-        iosWindow.document.close();
-      }
-    } catch (error) {
-      console.warn('iOS 预打开窗口失败:', error);
-
-      iosWindow = null;
-    }
-  }
+  // 防止用户连续点击
+  if (isExporting.value) return;
 
   isExporting.value = true;
 
+  let objectUrl = null;
+
   try {
-    /*
-     * ====================================================
-     * 请求 Excel
-     * ====================================================
-     *
-     * 非常重要：
-     *
-     * 把当前搜索条件也传给后端。
-     *
-     * 这样：
-     *
-     * 搜索“张三”
-     * 只导出张三
-     *
-     * 选择 2026-08
-     * 导出 2026-08
-     *
-     * ====================================================
-     */
-
-    const response = await request({
+    // ==========================================
+    // 1. 请求后端
+    // ==========================================
+    const res = await request({
       url: '/api/admin/attendance/export',
-
       method: 'get',
-
-      responseType: 'blob',
-
       params: {
-        keyword: keyword.value?.trim() || '',
-
+        keyword: keyword.value || '',
         month: month.value || '',
       },
+      responseType: 'blob',
     });
 
-    /*
-     * ====================================================
-     * 检查 Blob
-     * ====================================================
-     */
+    // ==========================================
+    // 2. 获取 Content-Type
+    // ==========================================
+    const contentType =
+      res.headers?.['content-type'] || res.headers?.['Content-Type'] || '';
 
-    const data = response?.data;
+    console.log('Excel Content-Type:', contentType);
+    console.log('Excel Blob Size:', res.data?.size);
 
-    if (!data) {
-      throw new Error('服务器没有返回文件');
-    }
+    // ==========================================
+    // 3. 后端返回 JSON 错误
+    //
+    // 因为 axios responseType = blob
+    // 所以后端 JSON 也会变成 Blob
+    // ==========================================
+    if (
+      contentType.includes('application/json') ||
+      contentType.includes('text/plain')
+    ) {
+      const text = await res.data.text();
 
-    /*
-     * axios + Blob
-     */
-    const blob =
-      data instanceof Blob
-        ? data
-        : new Blob([data], {
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          });
+      console.error('后端导出错误:', text);
 
-    /*
-     * 如果后端错误时返回 JSON Blob
-     * 这里尝试检测一下。
-     */
-
-    if (blob.type && blob.type.includes('application/json')) {
       try {
-        const text = await blob.text();
-
         const json = JSON.parse(text);
 
-        throw new Error(json.message || '导出失败');
-      } catch (error) {
-        /*
-         * 如果本身就是我们抛出的错误
-         */
-        if (
-          error?.message &&
-          error.message !== 'Unexpected end of JSON input'
-        ) {
-          throw error;
-        }
-
-        throw new Error('服务器返回了错误信息');
+        ElMessage.error(json.message || 'Excel 导出失败');
+      } catch {
+        ElMessage.error('Excel 导出失败，请检查服务器');
       }
-    }
-
-    /*
-     * ====================================================
-     * 文件名
-     * ====================================================
-     */
-
-    const serverFileName = getFileNameFromResponse(response);
-
-    const fileName = serverFileName || createExportFileName();
-
-    /*
-     * ====================================================
-     * iOS
-     * ====================================================
-     */
-
-    if (isIOS()) {
-      const success = await downloadForIOS(blob, fileName, iosWindow);
-
-      if (!success) {
-        throw new Error('iPhone 无法打开 Excel 文件');
-      }
-
-      ElMessage.success('Excel 已准备完成，请在新页面使用分享按钮保存');
-
-      /*
-       * 给用户一个更明显的提示
-       */
-      setTimeout(() => {
-        iosDownloadDialogVisible.value = true;
-      }, 500);
 
       return;
     }
 
-    /*
-     * ====================================================
-     * PC / Android
-     * ====================================================
-     */
+    // ==========================================
+    // 4. 检查 Blob
+    // ==========================================
+    if (!res.data) {
+      ElMessage.error('服务器没有返回文件');
+      return;
+    }
 
-    downloadBlob(blob, fileName);
+    if (res.data.size === 0) {
+      ElMessage.error('Excel 文件为空');
+      return;
+    }
 
-    ElMessage.success('Excel 导出成功');
-  } catch (error) {
-    console.error('Excel 导出失败:', error);
+    // ==========================================
+    // 5. 创建 Excel Blob
+    // ==========================================
+    const excelBlob = new Blob([res.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
 
-    /*
-     * 如果 iOS 新窗口已经打开，
-     * 出错时不要留下一个白屏。
-     */
-    if (iosWindow && !iosWindow.closed) {
+    // ==========================================
+    // 6. 文件名
+    // ==========================================
+    const now = new Date();
+
+    const dateStr =
+      now.getFullYear() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0');
+
+    const fileName = `龍華合同会社出勤管理表_${dateStr}.xlsx`;
+
+    // ==========================================
+    // 7. 判断 iPhone / iPad
+    // ==========================================
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    console.log('是否 iOS:', isIOS);
+
+    // ==========================================
+    // 8. iPhone / iPad
+    //
+    // 不使用 a.click()
+    // 不使用 window.location
+    // 不打开 Blob 空白页面
+    //
+    // 直接进入 iOS 系统分享/保存
+    // ==========================================
+    if (isIOS && typeof navigator.share === 'function') {
       try {
-        iosWindow.document.body.innerHTML = `
-          <div style="
-            padding:40px 20px;
-            text-align:center;
-            font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-          ">
-            <h2 style="color:#ef4444;">
-              Excel 导出失败
-            </h2>
+        const file = new File([excelBlob], fileName, {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
 
-            <p style="
-              color:#64748b;
-              line-height:1.7;
-            ">
-              ${getErrorMessage(error, '请稍后重试')}
-            </p>
-          </div>
-        `;
-      } catch (e) {
-        console.error(e);
+        const shareData = {
+          files: [file],
+          title: fileName,
+          text: '考勤 Excel 文件',
+        };
+
+        // iOS 支持文件分享
+        if (
+          typeof navigator.canShare === 'function' &&
+          navigator.canShare({
+            files: [file],
+          })
+        ) {
+          await navigator.share(shareData);
+
+          ElMessage.success('请在系统菜单中选择“存储到文件”');
+
+          return;
+        }
+      } catch (error) {
+        // 用户主动关闭分享菜单
+        if (error && error.name === 'AbortError') {
+          console.log('用户取消了文件分享');
+          return;
+        }
+
+        console.warn('iOS 文件分享失败:', error);
       }
     }
 
-    ElMessage.error(getErrorMessage(error, 'Excel 导出失败，请稍后重试'));
+    // ==========================================
+    // 9. PC / Android / 普通浏览器
+    //
+    // 使用 Blob + <a download>
+    // ==========================================
+    objectUrl = window.URL.createObjectURL(excelBlob);
+
+    const link = document.createElement('a');
+
+    link.href = objectUrl;
+    link.download = fileName;
+
+    // 防止影响页面
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    // ==========================================
+    // 10. 延迟释放 Blob URL
+    //
+    // 不要立即 revoke
+    // Safari / Chrome 有时候还没读取完
+    // ==========================================
+    setTimeout(() => {
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl);
+
+        objectUrl = null;
+      }
+    }, 5000);
+
+    ElMessage.success('Excel 导出成功');
+  } catch (error) {
+    console.error('Excel 导出异常:', error);
+
+    // ==========================================
+    // 11. 尝试读取后端错误
+    // ==========================================
+    try {
+      const errorData = error?.response?.data;
+
+      if (errorData instanceof Blob) {
+        const text = await errorData.text();
+
+        console.error('服务器错误内容:', text);
+
+        try {
+          const json = JSON.parse(text);
+
+          ElMessage.error(json.message || 'Excel 导出失败');
+        } catch {
+          ElMessage.error('Excel 导出失败，请检查服务器');
+        }
+      } else {
+        ElMessage.error(
+          error?.response?.data?.message || error?.message || 'Excel 导出失败',
+        );
+      }
+    } catch {
+      ElMessage.error('Excel 导出失败');
+    }
   } finally {
     isExporting.value = false;
   }
 };
-
 /* =========================================================
  * 错误信息
  * ========================================================= */
